@@ -1,11 +1,16 @@
 # Раскатка Intention на сервер (atoomyk.ru)
 
-Домен: `https://atoomyk.ru` (без `www`).
+Домен: `https://atoomyk.ru`. В `server_name` оставлен и `www.atoomyk.ru`:
+сертификат выдан на оба имени, иначе автопродление может ругаться.
 Путь деплоя: `/opt/intention`, данные: `/opt/intention/data`.
 Пользователь сервиса: `intention`.
 Приложение слушает только `127.0.0.1:8000`, наружу — nginx с HTTPS.
 
 Все команды ниже — на сервере (Ubuntu/Debian, нужен root/sudo).
+
+Состояние сервера `atoomyk.ru` (31.77.78.166) на момент переноса: шаги 1–5 уже выполнены —
+пользователь `intention`, код в `/opt/intention`, сервис `intention` запущен и проверен после перезагрузки.
+Старый сайт `pulse` (`/opt/pulse`, `/var/www/pulse`, `pulse-api.service`) удалён. Осталось включить nginx-сайт (шаг 6).
 
 ## 0. Что должно быть готово заранее
 
@@ -92,23 +97,31 @@ curl -s http://127.0.0.1:8000/api/health     # {"ok":true}
 
 ## 6. nginx + HTTPS
 
+Конфиг ссылается на `/etc/letsencrypt/live/atoomyk.ru/...`, поэтому порядок зависит от того, есть ли сертификат: `sudo certbot certificates`.
+
+Сертификат уже есть (обычный случай для этого сервера):
+
 ```bash
 sudo mkdir -p /var/www/certbot
 sudo cp /opt/intention/deploy/atoomyk.ru.conf /etc/nginx/sites-available/atoomyk.ru.conf
 sudo ln -sf /etc/nginx/sites-available/atoomyk.ru.conf /etc/nginx/sites-enabled/atoomyk.ru.conf
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Первый раз сертификата ещё нет, поэтому сначала получаем его (certbot сам допишет ssl-директивы и сделает редирект):
+Сертификата нет: получаем перед включением конфига (nginx на время останавливаем) и только потом включаем сайт:
 
 ```bash
-sudo certbot --nginx -d atoomyk.ru
-sudo nginx -t && sudo systemctl reload nginx
-sudo systemctl status certbot.timer   # автопродление
+sudo mkdir -p /var/www/certbot
+sudo systemctl stop nginx
+sudo certbot certonly --standalone -d atoomyk.ru -d www.atoomyk.ru
+sudo systemctl start nginx
 ```
 
-Примечание: на nginx 1.25+ строка `listen 443 ssl http2;` устарела — можно заменить на `listen 443 ssl;` + `http2 on;`.
+Заглушку по умолчанию можно отключить, если она мешает: `sudo rm -f /etc/nginx/sites-enabled/default`.
+
+Продление: `systemctl status certbot.timer`, проверка без реального продления — `sudo certbot renew --dry-run`.
+
+Примечание: на nginx 1.25+ строка `listen 443 ssl http2;` устарела — можно заменить на `listen 443 ssl;` + `http2 on;` (на Ubuntu 24.04 с nginx 1.24 текущий вариант ещё valid).
 
 ## 7. Firewall
 
@@ -168,6 +181,6 @@ sudo crontab -e
 | `database is locked` | один воркер uvicorn (в unit так и есть); проверить права на `data/` |
 | `Permission denied` при записи в `data/` | владелец и `chmod 700 data`, `ReadWritePaths` в unit |
 | Все сессии слетели | пропал или заменён `data/secret.key` (восстановить из бэкапа) |
-| `nginx -t` падает на ssl | сертификата нет — сначала `certbot --nginx -d atoomyk.ru` |
+| `nginx -t` падает на ssl | нет файлов в `/etc/letsencrypt/live/atoomyk.ru/` — получить сертификат: `systemctl stop nginx && certbot certonly --standalone -d atoomyk.ru -d www.atoomyk.ru && systemctl start nginx` |
 | Не грузит `app.js`/`styles.css` | пути в приложении абсолютные: приложение должно стоять в корне домена, а не в подпапке |
 | Пустая страница после логина | открыть консоль браузера, посмотреть ответы `/api/me`, `/api/leaderboard` |
