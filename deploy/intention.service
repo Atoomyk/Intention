@@ -1,0 +1,35 @@
+[Unit]
+Description=Intention web API (FastAPI/uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=intention
+Group=intention
+WorkingDirectory=/opt/intention
+
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/opt/intention/.venv/bin/python -m uvicorn server.app:app \
+  --host 127.0.0.1 --port 8000 \
+  --proxy-headers --forwarded-allow-ips=127.0.0.1
+
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+
+# Базовая защита. ProtectSystem=strict делает /opt только для чтения,
+# поэтому запись разрешена ровно там, где нужна — в каталоге данных.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/opt/intention/data
+
+[Install]
+WantedBy=multi-user.target

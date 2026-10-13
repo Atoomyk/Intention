@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Iterator, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -135,13 +134,19 @@ def init_db() -> None:
 
 init_db()
 
-app = FastAPI(title="Intention")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+# Same-origin frontend: no CORS middleware needed.
+# Docs are disabled so the public server exposes only its own pages.
+app = FastAPI(
+    title="Intention",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
+
+
+@app.get("/api/health")
+def health() -> dict:
+    return {"ok": True}
 
 
 class AuthIn(BaseModel):

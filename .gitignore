@@ -1,10 +1,40 @@
+# --- Окружение Python ---
 .venv/
-data/
+venv/
+env/
 __pycache__/
-*.pyc
-dist/
-build/
-*.spec
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Данные, секреты, личные сохранения (только локально и на сервере) ---
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+secret.key
+*.key
+.env
+.env.*
 save.json
-.idea/
+
+# --- Сборка десктоп-версии ---
+build/
+dist/
+*.spec
+*.exe
 build_exe.bat
+
+# --- IDE и ОС ---
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Логи и временные файлы ---
+*.log
+*.tmp
