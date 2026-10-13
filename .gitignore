@@ -1,0 +1,10 @@
+.venv/
+data/
+__pycache__/
+*.pyc
+dist/
+build/
+*.spec
+save.json
+.idea/
+build_exe.bat
